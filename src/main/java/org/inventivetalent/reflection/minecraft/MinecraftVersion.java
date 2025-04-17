@@ -2,6 +2,7 @@ package org.inventivetalent.reflection.minecraft;
 
 import org.bukkit.Bukkit;
 
+import java.lang.reflect.Field;
 import java.util.regex.Matcher;
 
 public class MinecraftVersion {
@@ -124,23 +125,14 @@ public class MinecraftVersion {
     }
 
     public static MinecraftVersion getVersion() {
-        Class serverClass;
-        try {
-            serverClass = Bukkit.getServer().getClass();
-        } catch (Exception e) {
-            System.err.println("[ReflectionHelper/MinecraftVersion] Failed to get bukkit server class: " + e.getMessage());
-            System.err.println("[ReflectionHelper/MinecraftVersion] Assuming we're in a test environment!");
-            return null;
-        }
-        String name = serverClass.getPackage().getName();
-        String versionPackage = name.substring(name.lastIndexOf('.') + 1);
+        String versionPackage = getVersionPackage();
         for (Minecraft.Version version : Minecraft.Version.values()) {
             MinecraftVersion minecraftVersion = version.minecraft();
             if (minecraftVersion.matchesPackageName(versionPackage)) {
                 return minecraftVersion;
             }
         }
-        System.err.println("[ReflectionHelper/MinecraftVersion] Failed to find version enum for '" + name + "'/'" + versionPackage + "'");
+        System.err.println("[ReflectionHelper/MinecraftVersion] Failed to find version enum for '" + versionPackage + "'");
 
         System.out.println("[ReflectionHelper/MinecraftVersion] Generating dynamic constant...");
         Matcher matcher = Minecraft.NUMERIC_VERSION_PATTERN.matcher(versionPackage);
@@ -177,5 +169,15 @@ public class MinecraftVersion {
         System.err.println("[ReflectionHelper/MinecraftVersion] Failed to create dynamic version for " + versionPackage);
 
         return new MinecraftVersion("UNKNOWN", -1);
+    }
+
+    private static String getVersionPackage() {
+        try {
+            Class<?> paperMappingEnvironment = Class.forName("io.papermc.paper.util.MappingEnvironment");
+            Field fieldCbVersion = paperMappingEnvironment.getField("LEGACY_CB_VERSION");
+            return (String) fieldCbVersion.get(null);
+        } catch (Exception e) {
+            return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+        }
     }
 }
