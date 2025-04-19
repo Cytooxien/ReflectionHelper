@@ -11,6 +11,7 @@ import org.inventivetalent.reflection.resolver.wrapper.MethodWrapper;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -43,11 +44,11 @@ public class ReflectionAnnotations {
 			if (classAnnotation != null) {
 				List<String> nameList = parseAnnotationVersions(Class.class, classAnnotation);
 				if (nameList.isEmpty()) { throw new IllegalArgumentException("@Class names cannot be empty"); }
-				String[] names = nameList.toArray(new String[nameList.size()]);
+				String[] names = nameList.toArray(new String[0]);
 				for (int i = 0; i < names.length; i++) {// Replace NMS & OBC
 					names[i] = names[i]
-							.replace("{nms}", "net.minecraft.server." + MinecraftVersion.VERSION.packageName())
-							.replace("{obc}", "org.bukkit.craftbukkit." + MinecraftVersion.VERSION.packageName());
+							.replace("{nms}", "net.minecraft.server." + MinecraftVersion.VERSION.getNmsPackage())
+							.replace("{obc}", "org.bukkit.craftbukkit." + MinecraftVersion.VERSION.getObcPackage());
 				}
 				try {
 					if (ClassWrapper.class.isAssignableFrom(field.getType())) {
@@ -67,7 +68,7 @@ public class ReflectionAnnotations {
 			} else if (fieldAnnotation != null) {
 				List<String> nameList = parseAnnotationVersions(Field.class, fieldAnnotation);
 				if (nameList.isEmpty()) { throw new IllegalArgumentException("@Field names cannot be empty"); }
-				String[] names = nameList.toArray(new String[nameList.size()]);
+				String[] names = nameList.toArray(new String[0]);
 				try {
 					FieldResolver fieldResolver = new FieldResolver(parseClass(Field.class, fieldAnnotation, toLoad));
 					if (FieldWrapper.class.isAssignableFrom(field.getType())) {
@@ -87,7 +88,7 @@ public class ReflectionAnnotations {
 			} else if (methodAnnotation != null) {
 				List<String> nameList = parseAnnotationVersions(Method.class, methodAnnotation);
 				if (nameList.isEmpty()) { throw new IllegalArgumentException("@Method names cannot be empty"); }
-				String[] names = nameList.toArray(new String[nameList.size()]);
+				String[] names = nameList.toArray(new String[0]);
 
 				boolean isSignature = names[0].contains(" ");// Only signatures can contain spaces (e.g. "void aMethod()")
 				for (String s : names) {
@@ -140,9 +141,7 @@ public class ReflectionAnnotations {
 			Minecraft.Version[] versions = (Minecraft.Version[]) clazz.getMethod("versions").invoke(annotation);
 
 			if (versions.length == 0) {// No versions specified -> directly use the names
-				for (String name : names) {
-					list.add(name);
-				}
+                list.addAll(Arrays.asList(names));
 			} else {
 				if (versions.length > names.length) {
 					throw new RuntimeException("versions array cannot have more elements than the names (" + clazz + ")");
@@ -151,9 +150,9 @@ public class ReflectionAnnotations {
 					if (MinecraftVersion.VERSION.equal(versions[i])) {// Wohoo, perfect match!
 						list.add(names[i]);
 					} else {
-						if (names[i].startsWith(">") && Minecraft.VERSION.newerThan(versions[i])) {// Match if the current version is newer
+						if (names[i].startsWith(">") && MinecraftVersion.VERSION.newerThan(versions[i])) {// Match if the current version is newer
 							list.add(names[i].substring(1));
-						} else if (names[i].startsWith("<") && Minecraft.VERSION.olderThan(versions[i])) {// Match if the current version is older
+						} else if (names[i].startsWith("<") && MinecraftVersion.VERSION.olderThan(versions[i])) {// Match if the current version is older
 							list.add(names[i].substring(1));
 						}
 					}
@@ -175,9 +174,9 @@ public class ReflectionAnnotations {
 				String fieldName = matcher.group(1);// It's a reference to a previously loaded class
 				java.lang.reflect.Field field = toLoad.getClass().getField(fieldName);
 				if (ClassWrapper.class.isAssignableFrom(field.getType())) {
-					return ((ClassWrapper) field.get(toLoad)).getName();
+					return ((ClassWrapper<?>) field.get(toLoad)).getName();
 				} else if (java.lang.Class.class.isAssignableFrom(field.getType())) {
-					return ((java.lang.Class) field.get(toLoad)).getName();
+					return ((java.lang.Class<?>) field.get(toLoad)).getName();
 				}
 			}
 			return className;

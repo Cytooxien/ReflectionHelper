@@ -1,28 +1,28 @@
 package org.inventivetalent.reflection.minecraft;
 
+import lombok.extern.slf4j.Slf4j;
 import org.bukkit.Bukkit;
 
 import java.lang.reflect.Field;
 import java.util.regex.Matcher;
 
+@Slf4j(topic = "ReflectionHelper/MinecraftVersion")
 public class MinecraftVersion {
 
     public static final MinecraftVersion VERSION;
 
     static {
-        System.out.println("[ReflectionHelper/MinecraftVersion] I am loaded from package " + Minecraft.class.getPackage().getName());
+        log.info("I am loaded from package {}", Minecraft.class.getPackage().getName());
         try {
             VERSION = MinecraftVersion.getVersion();
         } catch (Exception e) {
             throw new RuntimeException("Failed to get version", e);
         }
-        System.out.println("[ReflectionHelper/MinecraftVersion] Version is " + VERSION);
+        log.info("Version is {}", VERSION);
     }
 
     private final String packageName;
     private final int version;
-    private final String nmsFormat;
-    private final String obcFormat;
     private final String nmsPackage;
     private final String obcPackage;
     private final boolean nmsVersionPrefix;
@@ -30,20 +30,13 @@ public class MinecraftVersion {
     MinecraftVersion(String packageName, int version, String nmsFormat, String obcFormat, boolean nmsVersionPrefix) {
         this.packageName = packageName;
         this.version = version;
-        this.nmsFormat = nmsFormat;
-        this.obcFormat = obcFormat;
-        this.nmsPackage = String.format(this.nmsFormat, packageName);
-        this.obcPackage = String.format(this.obcFormat, packageName);
+        this.nmsPackage = String.format(nmsFormat, packageName);
+        this.obcPackage = String.format(obcFormat, packageName);
         this.nmsVersionPrefix = nmsVersionPrefix;
     }
 
     MinecraftVersion(String packageName, int version) {
         this(packageName, version, "net.minecraft.server.%s", "org.bukkit.craftbukkit.%s", true);
-    }
-
-    // Used by SantiyCheck
-    MinecraftVersion(Minecraft.Version version) {
-        this(version.name(), version.version());
     }
 
     /**
@@ -126,47 +119,24 @@ public class MinecraftVersion {
 
     public static MinecraftVersion getVersion() {
         String versionPackage = getVersionPackage();
-        for (Minecraft.Version version : Minecraft.Version.values()) {
-            MinecraftVersion minecraftVersion = version.minecraft();
-            if (minecraftVersion.matchesPackageName(versionPackage)) {
-                return minecraftVersion;
-            }
-        }
-        System.err.println("[ReflectionHelper/MinecraftVersion] Failed to find version enum for '" + versionPackage + "'");
-
-        System.out.println("[ReflectionHelper/MinecraftVersion] Generating dynamic constant...");
         Matcher matcher = Minecraft.NUMERIC_VERSION_PATTERN.matcher(versionPackage);
         while (matcher.find()) {
             if (matcher.groupCount() < 3) {
                 continue;
             }
-
             String majorString = matcher.group(1);
-            String minorString = matcher.group(2);
-            if (minorString.length() == 1) {
-                minorString = "0" + minorString;
-            }
-            String patchString = matcher.group(3);
-            if (patchString.length() == 1) {
-                patchString = "0" + patchString;
-            }
-
-            String numVersionString = majorString + minorString + patchString;
-            int numVersion = Integer.parseInt(numVersionString);
+            String minorString = String.format("%02d", Integer.parseInt(matcher.group(2)));
+            String patchString = String.format("%02d", Integer.parseInt(matcher.group(3)));
+            int numVersion = Integer.parseInt(majorString + minorString + patchString);
             String packageName = "v" + versionPackage.substring(1).toUpperCase();
 
             boolean postOneSeventeen = numVersion > 11701;
-
-            //dynamic register version
-            System.out.println("[ReflectionHelper/MinecraftVersion] Injected dynamic version " + packageName + " (#" + numVersion + ").");
-            System.out.println("[ReflectionHelper/MinecraftVersion] Please inform inventivetalent about the outdated version, as this is not guaranteed to work.");
             if (postOneSeventeen) { // new nms package format for 1.17+
                 return new MinecraftVersion(packageName, numVersion, "net.minecraft", "org.bukkit.craftbukkit.%s", false);
             }
             return new MinecraftVersion(packageName, numVersion);
         }
-
-        System.err.println("[ReflectionHelper/MinecraftVersion] Failed to create dynamic version for " + versionPackage);
+        log.error("Failed to create dynamic version for {}", versionPackage);
 
         return new MinecraftVersion("UNKNOWN", -1);
     }

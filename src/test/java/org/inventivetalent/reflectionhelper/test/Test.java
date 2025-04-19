@@ -1,6 +1,7 @@
 package org.inventivetalent.reflectionhelper.test;
 
 import org.inventivetalent.reflection.minecraft.Minecraft;
+import org.inventivetalent.reflection.minecraft.MinecraftVersion;
 import org.inventivetalent.reflection.resolver.wrapper.MethodWrapper;
 
 import java.lang.reflect.Method;
@@ -106,6 +107,8 @@ public class Test {
 
 	@org.junit.Test
 	public void versionTest() {
+		assertNotNull(MinecraftVersion.VERSION);
+		assertNotNull(Minecraft.Version.v1_14_R1);
 		assertEquals("net.minecraft.server.v1_16_R3", Minecraft.Version.v1_16_R3.minecraft().getNmsPackage());
 		assertEquals("net.minecraft", Minecraft.Version.v1_17_R1.minecraft().getNmsPackage());
 	}

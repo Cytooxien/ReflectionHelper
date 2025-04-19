@@ -1,18 +1,11 @@
 package org.inventivetalent.reflection.minecraft;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
-import org.inventivetalent.reflection.resolver.ConstructorResolver;
-import org.inventivetalent.reflection.resolver.FieldResolver;
-import org.inventivetalent.reflection.resolver.MethodResolver;
 import org.inventivetalent.reflection.resolver.minecraft.NMSClassResolver;
 import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
 import org.inventivetalent.reflection.util.AccessUtil;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -25,47 +18,41 @@ public class Minecraft {
     /**
      * @deprecated use {@link MinecraftVersion#VERSION} instead
      */
-    @Deprecated
-    public static final Version VERSION;
+    @Deprecated(forRemoval = true)
+    public static final Version VERSION = Version.UNKNOWN;
     public static final MinecraftVersion MINECRAFT_VERSION = MinecraftVersion.VERSION;
 
-    private static NMSClassResolver nmsClassResolver = new NMSClassResolver();
-    private static OBCClassResolver obcClassResolver = new OBCClassResolver();
-    private static Class<?> NmsEntity;
-    private static Class<?> CraftEntity;
+    private static final NMSClassResolver nmsClassResolver = new NMSClassResolver();
+    private static final OBCClassResolver obcClassResolver = new OBCClassResolver();
+    private static Class<?> NmsEntity = null;
+    private static Class<?> CraftEntity = null;
 
-    static {
-        try {
-            MinecraftVersion.getVersion();
-        } catch (Exception e) {
+    private static Class<?> getNmsEntity() {
+        if (NmsEntity == null) {
+            try {
+                NmsEntity = nmsClassResolver.resolve("Entity", "world.entity.Entity");
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
         }
+        return NmsEntity;
+    }
 
-        Version tempVersion = Version.UNKNOWN;
-        try {
-            tempVersion = Version.getVersion();
-        } catch (Exception e) {
-            System.out.println("[ReflectionHelper] Failed to get legacy version");
+    private static Class<?> getCraftEntity() {
+        if (CraftEntity == null) {
+            try {
+                CraftEntity = obcClassResolver.resolve("entity.CraftEntity");
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
         }
-        VERSION = tempVersion;
-
-        try {
-            Version.runSanityCheck();
-        } catch (Exception e) {
-            throw new RuntimeException("Sanity check which should always succeed just failed! Am I crazy?!", e);
-        }
-
-        try {
-            NmsEntity = nmsClassResolver.resolve("Entity", "world.entity.Entity");
-            CraftEntity = obcClassResolver.resolve("entity.CraftEntity");
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
+        return CraftEntity;
     }
 
     /**
      * @return the current NMS/OBC version (format <code>&lt;version&gt;.</code>
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static String getVersion() {
         return MINECRAFT_VERSION.packageName() + ".";
     }
@@ -89,7 +76,7 @@ public class Minecraft {
         try {
             method = AccessUtil.setAccessible(object.getClass().getDeclaredMethod("getHandle"));
         } catch (ReflectiveOperationException e) {
-            method = AccessUtil.setAccessible(CraftEntity.getDeclaredMethod("getHandle"));
+            method = AccessUtil.setAccessible(getCraftEntity().getDeclaredMethod("getHandle"));
         }
         return method.invoke(object);
     }
@@ -97,9 +84,9 @@ public class Minecraft {
     public static Entity getBukkitEntity(Object object) throws ReflectiveOperationException {
         Method method;
         try {
-            method = AccessUtil.setAccessible(NmsEntity.getDeclaredMethod("getBukkitEntity"));
+            method = AccessUtil.setAccessible(getNmsEntity().getDeclaredMethod("getBukkitEntity"));
         } catch (ReflectiveOperationException e) {
-            method = AccessUtil.setAccessible(CraftEntity.getDeclaredMethod("getHandle"));
+            method = AccessUtil.setAccessible(getCraftEntity().getDeclaredMethod("getHandle"));
         }
         return (Entity) method.invoke(object);
     }
@@ -107,7 +94,7 @@ public class Minecraft {
     public static Object getHandleSilent(Object object) {
         try {
             return getHandle(object);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return null;
     }
@@ -197,7 +184,7 @@ public class Minecraft {
          * @param version the version to check
          * @return <code>true</code> if this version is older than the specified version
          */
-        @Deprecated
+        @Deprecated(forRemoval = true)
         public boolean olderThan(Version version) {
             return version() < version.version();
         }
@@ -206,7 +193,7 @@ public class Minecraft {
          * @param version the version to check
          * @return <code>true</code> if this version is newer than the specified version
          */
-        @Deprecated
+        @Deprecated(forRemoval = true)
         public boolean newerThan(Version version) {
             return version() >= version.version();
         }
@@ -216,7 +203,7 @@ public class Minecraft {
          * @param newVersion The newer version to check
          * @return <code>true</code> if this version is newer than the oldVersion and older that the newVersion
          */
-        @Deprecated
+        @Deprecated(forRemoval = true)
         public boolean inRange(Version oldVersion, Version newVersion) {
             return newerThan(oldVersion) && olderThan(newVersion);
         }
@@ -232,95 +219,9 @@ public class Minecraft {
             return version;
         }
 
-        static void runSanityCheck() {
-            assert v1_14_R1.newerThan(v1_13_R2);
-            assert v1_13_R2.olderThan(v1_14_R1);
-
-            assert v1_13_R2.newerThan(v1_8_R1);
-
-            assert v1_13_R2.newerThan(v1_8_R1) && v1_13_R2.olderThan(v1_14_R1);
-        }
-
-        @Deprecated
-        public static Version getVersion() {
-            String versionPackage = getVersionPackage();
-            for (Version version : values()) {
-                if (version.matchesPackageName(versionPackage)) {return version;}
-            }
-            System.err.println("[ReflectionHelper] Failed to find version enum for '" + versionPackage + "'");
-
-            System.out.println("[ReflectionHelper] Generating dynamic constant...");
-            Matcher matcher = NUMERIC_VERSION_PATTERN.matcher(versionPackage);
-            while (matcher.find()) {
-                if (matcher.groupCount() < 3) {continue;}
-
-                String majorString = matcher.group(1);
-                String minorString = matcher.group(2);
-                if (minorString.length() == 1) {minorString = "0" + minorString;}
-                String patchString = matcher.group(3);
-                if (patchString.length() == 1) {patchString = "0" + patchString;}
-
-                String numVersionString = majorString + minorString + patchString;
-                int numVersion = Integer.parseInt(numVersionString);
-                String packge = versionPackage;
-
-                try {
-                    // Add enum value
-                    Field valuesField = new FieldResolver(Version.class).resolve("$VALUES");
-                    Version[] oldValues = (Version[]) valuesField.get(null);
-                    Version[] newValues = new Version[oldValues.length + 1];
-                    System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
-                    Version dynamicVersion = (Version) newEnumInstance(Version.class, new Class[]{
-                            String.class,
-                            int.class,
-                            int.class
-                    }, new Object[]{
-                            packge,
-                            newValues.length - 1,
-                            numVersion
-                    });
-                    newValues[newValues.length - 1] = dynamicVersion;
-                    valuesField.set(null, newValues);
-
-                    System.out.println("[ReflectionHelper] Injected dynamic version " + packge + " (#" + numVersion + ").");
-                    System.out.println("[ReflectionHelper] Please inform inventivetalent about the outdated version, as this is not guaranteed to work.");
-                    return dynamicVersion;
-                } catch (ReflectiveOperationException e) {
-                    System.out.println("[ReflectionHelper] Failed to create deprecated dynamic version");
-                    System.out.println("[ReflectionHelper] If the above (ReflectionHelper/MinecraftVersion) succeeded, you can ignore this.");
-                    e.printStackTrace();
-                }
-            }
-
-            return UNKNOWN;
-        }
-
-        private static String getVersionPackage() {
-            try {
-                Class<?> paperMappingEnvironment = Class.forName("io.papermc.paper.util.MappingEnvironment");
-                Field fieldCbVersion = paperMappingEnvironment.getField("LEGACY_CB_VERSION");
-                return (String) fieldCbVersion.get(null);
-            } catch (Exception e) {
-                return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
-            }
-        }
-
         @Override
         public String toString() {
             return name() + " (" + version() + ")";
         }
     }
-
-    @Deprecated
-    public static Object newEnumInstance(Class clazz, Class[] types, Object[] values) throws ReflectiveOperationException {
-        Constructor constructor = new ConstructorResolver(clazz).resolve(types);
-        Field accessorField = new FieldResolver(Constructor.class).resolve("constructorAccessor");
-        Object constructorAccessor = accessorField.get(constructor);
-        if (constructorAccessor == null) {
-            new MethodResolver(Constructor.class).resolve("acquireConstructorAccessor").invoke(constructor);
-            constructorAccessor = accessorField.get(constructor);
-        }
-        return new MethodResolver(constructorAccessor.getClass()).resolve("newInstance").invoke(constructorAccessor, (Object) values);
-    }
-
 }

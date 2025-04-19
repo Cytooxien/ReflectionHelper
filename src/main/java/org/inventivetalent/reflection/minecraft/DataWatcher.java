@@ -36,7 +36,7 @@ public class DataWatcher {
     }
 
     public static Object setValue(Object dataWatcher, int index, Object dataWatcherObject/*1.9*/, Object value) throws ReflectiveOperationException {
-        if (Minecraft.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
+        if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
             return V1_8.setValue(dataWatcher, index, value);
         } else {
             return V1_9.setValue(dataWatcher, dataWatcherObject, value);
@@ -48,7 +48,7 @@ public class DataWatcher {
     }
 
     public static Object setValue(Object dataWatcher, int index, Object value, FieldResolver dataWatcherObjectFieldResolver/*1.9*/, String... dataWatcherObjectFieldNames/*1.9*/) throws ReflectiveOperationException {
-        if (Minecraft.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
+        if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
             return V1_8.setValue(dataWatcher, index, value);
         } else {
             Object dataWatcherObject = dataWatcherObjectFieldResolver.resolve(dataWatcherObjectFieldNames).get(null/*Should be a static field*/);
@@ -58,7 +58,7 @@ public class DataWatcher {
 
     @Deprecated
     public static Object getValue(DataWatcher dataWatcher, int index) throws ReflectiveOperationException {
-        if (Minecraft.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
+        if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
             return V1_8.getValue(dataWatcher, index);
         } else {
             return V1_9.getValue(dataWatcher, index);
@@ -70,7 +70,7 @@ public class DataWatcher {
     }
 
     public static Object getValue(Object dataWatcher, int index, Object dataWatcherObject/*1.9*/) throws ReflectiveOperationException {
-        if (Minecraft.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
+        if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_9_R1)) {
             return V1_8.getWatchableObjectValue(V1_8.getValue(dataWatcher, index));
         } else {
             return V1_9.getValue(dataWatcher, dataWatcherObject);
