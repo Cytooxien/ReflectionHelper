@@ -16,7 +16,8 @@ public class MinecraftVersion {
         try {
             VERSION = MinecraftVersion.getVersion();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get version", e);
+            String bukkitVersion = Bukkit.getServer().getBukkitVersion();
+            throw new RuntimeException("Failed to get version. BukkitVersion: " + bukkitVersion, e);
         }
         log.info("Version is {}", VERSION);
     }
@@ -118,27 +119,34 @@ public class MinecraftVersion {
     }
 
     public static MinecraftVersion getVersion() {
-        String versionPackage = getVersionPackage();
-        Matcher matcher = Minecraft.NUMERIC_VERSION_PATTERN.matcher(versionPackage);
-        while (matcher.find()) {
-            if (matcher.groupCount() < 3) {
-                continue;
-            }
-            String majorString = matcher.group(1);
-            String minorString = String.format("%02d", Integer.parseInt(matcher.group(2)));
-            String patchString = String.format("%02d", Integer.parseInt(matcher.group(3)));
-            int numVersion = Integer.parseInt(majorString + minorString + patchString);
-            String packageName = "v" + versionPackage.substring(1).toUpperCase();
+        String minecraftVersion = Bukkit.getServer().getBukkitVersion().replace("-R0.1-SNAPSHOT", "");
+        if (minecraftVersion.startsWith("1.")) {
+            // Version under unobfuscated Minecraft (26.1)
+            String versionPackage = getVersionPackage();
+            Matcher matcher = Minecraft.NUMERIC_VERSION_PATTERN.matcher(versionPackage);
+            while (matcher.find()) {
+                if (matcher.groupCount() < 3) {
+                    continue;
+                }
+                String majorString = matcher.group(1);
+                String minorString = String.format("%02d", Integer.parseInt(matcher.group(2)));
+                String patchString = String.format("%02d", Integer.parseInt(matcher.group(3)));
+                int numVersion = Integer.parseInt(majorString + minorString + patchString);
+                String packageName = "v" + versionPackage.substring(1).toUpperCase();
 
-            boolean postOneSeventeen = numVersion > 11701;
-            if (postOneSeventeen) { // new nms package format for 1.17+
-                return new MinecraftVersion(packageName, numVersion, "net.minecraft", "org.bukkit.craftbukkit.%s", false);
+                boolean postOneSeventeen = numVersion > 11701;
+                if (postOneSeventeen) { // new nms package format for 1.17+
+                    return new MinecraftVersion(packageName, numVersion, "net.minecraft", "org.bukkit.craftbukkit.%s", false);
+                }
+                return new MinecraftVersion(packageName, numVersion);
             }
-            return new MinecraftVersion(packageName, numVersion);
+            log.error("Failed to create dynamic version for {}", versionPackage);
+
+            return new MinecraftVersion("UNKNOWN", -1);
         }
-        log.error("Failed to create dynamic version for {}", versionPackage);
-
-        return new MinecraftVersion("UNKNOWN", -1);
+        String packageName = "v" + minecraftVersion.replace(".", "_");
+        int numVersion = semVerToInt(minecraftVersion);
+        return new MinecraftVersion(packageName, numVersion, "net.minecraft", "org.bukkit.craftbukkit", false);
     }
 
     private static String getVersionPackage() {
@@ -149,5 +157,20 @@ public class MinecraftVersion {
         } catch (Exception e) {
             return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
         }
+    }
+
+    private static int semVerToInt(String version) {
+        if (version == null || version.isBlank()) {
+            throw new IllegalArgumentException("version is empty");
+        }
+
+        String[] parts = version.split("\\.");
+        int major = parts.length > 0 ? Integer.parseInt(parts[0]) : 0;
+        int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+        int patch = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+
+        return major * 10000
+                + minor * 100
+                + patch;
     }
 }

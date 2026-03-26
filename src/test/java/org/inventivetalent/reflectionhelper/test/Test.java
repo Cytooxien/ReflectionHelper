@@ -1,10 +1,37 @@
 package org.inventivetalent.reflectionhelper.test;
 
+import com.avaje.ebean.config.ServerConfig;
+import org.bukkit.*;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarFlag;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
+import org.bukkit.command.CommandException;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.help.HelpMap;
+import org.bukkit.inventory.*;
+import org.bukkit.map.MapView;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.ServicesManager;
+import org.bukkit.plugin.messaging.Messenger;
+import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scoreboard.ScoreboardManager;
+import org.bukkit.util.CachedServerIcon;
 import org.inventivetalent.reflection.minecraft.Minecraft;
 import org.inventivetalent.reflection.minecraft.MinecraftVersion;
 import org.inventivetalent.reflection.resolver.wrapper.MethodWrapper;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.lang.reflect.Method;
+import java.util.*;
+import java.util.logging.Logger;
 
 import static org.junit.Assert.*;
 
@@ -107,10 +134,13 @@ public class Test {
 
 	@org.junit.Test
 	public void versionTest() {
+		Bukkit.setServer(new CraftServer());
 		assertNotNull(MinecraftVersion.VERSION);
 		assertNotNull(Minecraft.Version.v1_14_R1);
 		assertEquals("net.minecraft.server.v1_16_R3", Minecraft.Version.v1_16_R3.minecraft().getNmsPackage());
 		assertEquals("net.minecraft", Minecraft.Version.v1_17_R1.minecraft().getNmsPackage());
+		assertEquals("org.bukkit.craftbukkit.v1_21_R7", Minecraft.Version.v1_21_R7.minecraft().getObcPackage());
+		assertEquals("org.bukkit.craftbukkit", Minecraft.Version.v26_1.minecraft().getObcPackage());
 	}
 
 }

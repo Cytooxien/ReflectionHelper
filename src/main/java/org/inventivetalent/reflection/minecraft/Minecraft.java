@@ -154,9 +154,17 @@ public class Minecraft {
         v1_21_R1(12101),
         v1_21_R2(12102),
         v1_21_R3(12104),
+        v1_21_R4(12104),
+        v1_21_R5(12105),
+        v1_21_R6(12106),
+        v1_21_R7(12107),
+
+        v26_1(260100),
 
         /// (Potentially) Upcoming versions
-        v1_22_R1(12201),
+        v26_2(260200),
+        v26_3(260300),
+        v26_4(260400),
         ;
 
         private final MinecraftVersion version;
@@ -166,7 +174,9 @@ public class Minecraft {
         }
 
         Version(int version) {
-            if (version >= 11701) { // 1.17+ new class package name format
+            if (version >= 260100) { // 26.1 unobfuscated minecraft
+                this.version = new MinecraftVersion(name(), version, "net.minecraft", "org.bukkit.craftbukkit", false);
+            } else if (version >= 11701) { // 1.17+ new class package name format
                 this.version = new MinecraftVersion(name(), version, "net.minecraft", "org.bukkit.craftbukkit.%s", false);
             } else {
                 this.version = new MinecraftVersion(name(), version);
