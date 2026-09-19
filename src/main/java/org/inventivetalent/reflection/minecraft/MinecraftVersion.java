@@ -119,7 +119,12 @@ public class MinecraftVersion {
     }
 
     public static MinecraftVersion getVersion() {
-        String minecraftVersion = Bukkit.getServer().getBukkitVersion().replace("-R0.1-SNAPSHOT", "");
+        String minecraftVersion = Bukkit.getServer().getBukkitVersion();
+        if (minecraftVersion.contains(".build.")) {
+            minecraftVersion = minecraftVersion.substring(0, minecraftVersion.indexOf(".build."));
+        } else {
+            minecraftVersion = minecraftVersion.replace("-R0.1-SNAPSHOT", "");
+        }
         if (minecraftVersion.startsWith("1.")) {
             // Version under unobfuscated Minecraft (26.1)
             String versionPackage = getVersionPackage();
