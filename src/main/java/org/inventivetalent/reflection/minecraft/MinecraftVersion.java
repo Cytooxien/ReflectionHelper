@@ -122,6 +122,8 @@ public class MinecraftVersion {
         String minecraftVersion = Bukkit.getServer().getBukkitVersion();
         if (minecraftVersion.contains(".build.")) {
             minecraftVersion = minecraftVersion.substring(0, minecraftVersion.indexOf(".build."));
+        } else if (minecraftVersion.endsWith(".local-SNAPSHOT")) {
+            minecraftVersion = minecraftVersion.substring(0, minecraftVersion.indexOf(".local-SNAPSHOT"));
         } else {
             minecraftVersion = minecraftVersion.replace("-R0.1-SNAPSHOT", "");
         }
